@@ -9,8 +9,6 @@ metadata:
 parameters:
 - name: DEPLOYMENT_NAME
   value: tarantool
-- name: APP_NAME
-  value: tarantool
 - name: TARANTOOL_IMAGE
   value: tarantool/tarantool:2.3.1
 - name: TARANTOOL_MEMTX_MEMORY
@@ -84,18 +82,18 @@ objects:
   metadata:
     name: ${DEPLOYMENT_NAME}
     labels:
-      app: ${APP_NAME}
+      app: ${DEPLOYMENT_NAME}
   spec:
     serviceName: ${DEPLOYMENT_NAME}
     replicas: 3
     selector:
       matchLabels:
-        app: ${APP_NAME}
+        app: ${DEPLOYMENT_NAME}
     podManagementPolicy: Parallel
     template:
       metadata:
         labels:
-          app: ${APP_NAME}
+          app: ${DEPLOYMENT_NAME}
       spec:
         terminationGracePeriodSeconds: 30
         containers:
