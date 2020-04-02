@@ -7,7 +7,9 @@ metadata:
     tags: tarantool lua
 
 parameters:
-- name: DEPLOYMENT_NAME
+- name: COMPONENT_NAME
+  value: tarantool
+- name: APP_NAME
   value: tarantool
 - name: TARANTOOL_IMAGE
   value: tarantool/tarantool:2.3.1
@@ -28,12 +30,14 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${DEPLOYMENT_NAME}
+    name: ${COMPONENT_NAME}
     labels:
-      app: ${DEPLOYMENT_NAME}
+      app: ${APP_NAME}
+      component: ${COMPONENT_NAME}
   spec:
     selector:
-      app: ${DEPLOYMENT_NAME}
+      app: ${APP_NAME}
+      component: ${COMPONENT_NAME}
     clusterIP: None
     ports:
       - name: lua
@@ -43,13 +47,15 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${DEPLOYMENT_NAME}-balancer
+    name: ${COMPONENT_NAME}-balancer
     labels:
-      app: ${DEPLOYMENT_NAME}
+      app: ${APP_NAME}
+      component: ${COMPONENT_NAME}
   spec:
     type: NodePort
     selector:
-      app: ${DEPLOYMENT_NAME}
+      app: ${APP_NAME}
+      component: ${COMPONENT_NAME}
     ports:
       - name: lua
         port: 3301
@@ -60,40 +66,48 @@ objects:
     username: ${TARANTOOL_USER}
     password: ${TARANTOOL_PASS}
   metadata:
-    name: ${DEPLOYMENT_NAME}-secret
+    name: ${COMPONENT_NAME}-secret
+    labels:
+      app: ${APP_NAME}
+      component: ${COMPONENT_NAME}
   type: Opaque
 
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
-    name: ${DEPLOYMENT_NAME}-internal-access
+    name: ${COMPONENT_NAME}-internal-access
   spec:
     podSelector:
       matchLabels:
-        app: ${DEPLOYMENT_NAME}
+        app: ${APP_NAME}
+        component: ${COMPONENT_NAME}
     ingress:
     - from:
       - podSelector:
           matchLabels:
-            app: ${DEPLOYMENT_NAME}
+            app: ${APP_NAME}
+            component: ${COMPONENT_NAME}
 
 - kind: StatefulSet
   apiVersion: apps/v1beta1
   metadata:
-    name: ${DEPLOYMENT_NAME}
+    name: ${COMPONENT_NAME}
     labels:
-      app: ${DEPLOYMENT_NAME}
+      app: ${APP_NAME}
+      component: ${COMPONENT_NAME}
   spec:
-    serviceName: ${DEPLOYMENT_NAME}
+    serviceName: ${COMPONENT_NAME}
     replicas: 3
     selector:
       matchLabels:
-        app: ${DEPLOYMENT_NAME}
+        app: ${APP_NAME}
+        component: ${COMPONENT_NAME}
     podManagementPolicy: Parallel
     template:
       metadata:
         labels:
-          app: ${DEPLOYMENT_NAME}
+          app: ${APP_NAME}
+          component: ${COMPONENT_NAME}
       spec:
         terminationGracePeriodSeconds: 30
         containers:
@@ -122,15 +136,15 @@ objects:
           - name: TARANTOOL_USER_NAME
             valueFrom:
               secretKeyRef:
-                name: ${DEPLOYMENT_NAME}-secret
+                name: ${COMPONENT_NAME}-secret
                 key: username
           - name: TARANTOOL_USER_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: ${DEPLOYMENT_NAME}-secret
+                name: ${COMPONENT_NAME}-secret
                 key: password
           - name: TARANTOOL_REPLICATION
-            value: "${DEPLOYMENT_NAME}-0.${DEPLOYMENT_NAME},${DEPLOYMENT_NAME}-1.${DEPLOYMENT_NAME},${DEPLOYMENT_NAME}-2.${DEPLOYMENT_NAME}"
+            value: "${COMPONENT_NAME}-0.${COMPONENT_NAME},${COMPONENT_NAME}-1.${COMPONENT_NAME},${COMPONENT_NAME}-2.${COMPONENT_NAME}"
           - name: TARANTOOL_MEMTX_MEMORY
             value: ${TARANTOOL_MEMTX_MEMORY}
         volumes:
@@ -143,6 +157,9 @@ objects:
     volumeClaimTemplates:
     - metadata:
         name: tarantool-storage
+        labels:
+          app: ${APP_NAME}
+          component: ${COMPONENT_NAME}
       spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
